@@ -34,24 +34,21 @@ try {
   }
 } catch (err) {
   console.error("❌ Error loading session:", err);
-}
-// ✅ Initialize WhatsApp Client
+}const { Client, LocalAuth } = require('whatsapp-web.js');
+const chromiumPath = process.env.PUPPETEER_EXECUTABLE_PATH || null;
+
 const client = new Client({
-  session: sessionData,
+  authStrategy: new LocalAuth(),
   puppeteer: {
     headless: true,
-    executablePath: isRender
-      ? "/usr/bin/google-chrome-stable"
-      : "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    executablePath: chromiumPath,
     args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-extensions",
-      "--disable-gpu",
-      "--window-size=1920,1080",
-    ],
-  },
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu'
+    ]
+  }
 });
 
 
