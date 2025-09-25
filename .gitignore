@@ -1,13 +1,7 @@
-# Node modules
 node_modules/
 package-lock.json
-# WhatsApp auth/session files
 .wwebjs_auth/
 .wwebjs_cache/
-
-# OS files
+.env
 .DS_Store
 Thumbs.db
-node_modules/
-.wwebjs_auth/
-.wwebjs_cache/

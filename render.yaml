@@ -4,5 +4,9 @@ services:
     env: node
     plan: free
     buildCommand: "npm install"
-    startCommand: "node index.js"
-    
+    startCommand: "npm start"
+    envVars:
+      - key: MONGO_URI
+        value: mongodb+srv://fadikbb2004_db_user:A2B8g7iyeWHMkTOP@cluster0.eaizqsm.mongodb.net/whatsappBot
+      - key: true
+        value: true
