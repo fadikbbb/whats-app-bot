@@ -2,8 +2,7 @@ services:
   - type: web
     name: whatsapp-bot
     env: node
-    region: frankfurt
     plan: free
     buildCommand: "npm install"
     startCommand: "node index.js"
-    autoDeploy: true
+    

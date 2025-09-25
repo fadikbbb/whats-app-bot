@@ -1,31 +1,28 @@
-const { Client, LocalAuth } = require("whatsapp-web.js");
-const qrcode = require("qrcode-terminal");
+const { Client, LocalAuth } = require('whatsapp-web.js');
+const qrcode = require('qrcode-terminal');
 
 const client = new Client({
-  authStrategy: new LocalAuth(),
-  puppeteer: {
-    executablePath:
-      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // مسار جوجل كروم
+    authStrategy: new LocalAuth(),
+   puppeteer: {
     headless: true,
-  },
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+}
+
 });
 
-// إظهار QR code أول مرة
-client.on("qr", (qr) => {
-  qrcode.generate(qr, { small: true });
+
+client.on('qr', qr => {
+    qrcode.generate(qr, { small: true });
 });
 
-// عندما يكون البوت جاهز
-client.on("ready", () => {
-  console.log("✅ البوت جاهز للعمل!");
+client.on('ready', () => {
+    console.log('✅ البوت جاهز للعمل!');
 });
 
-// الردود الآلية
-client.on("message", (message) => {
-  const text = message.body.trim();
+client.on('message', message => {
+    const text = message.body.trim();
 
-  // خيارات الرد
-  if (text === "1" || text === "١") {
+    if (text === "1" || text === "١") {
     message.reply(
       `📲 تابعنا على وسائل التواصل:
 
