@@ -35,25 +35,25 @@ try {
 } catch (err) {
   console.error("❌ Error loading session:", err);
 }
-
-// ✅ Client Config
+// ✅ Initialize WhatsApp Client
 const client = new Client({
   session: sessionData,
   puppeteer: {
     headless: true,
     executablePath: isRender
-      ? '/usr/bin/google-chrome-stable'
-      : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      ? "/usr/bin/google-chrome-stable"
+      : "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
     args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-extensions',
-      '--disable-gpu',
-      '--window-size=1920,1080',
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-extensions",
+      "--disable-gpu",
+      "--window-size=1920,1080",
     ],
   },
 });
+
 
 // ✅ Events
 client.on('qr', (qr) => {
