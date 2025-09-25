@@ -8,3 +8,6 @@ node_modules/
 # OS files
 .DS_Store
 Thumbs.db
+node_modules/
+.wwebjs_auth/
+.wwebjs_cache/
