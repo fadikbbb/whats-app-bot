@@ -1,4 +1,4 @@
-import { Client, LocalAuth } from 'whatsapp-web.js';
+const { Client, LocalAuth } = require('whatsapp-web.js');
 import qrcode from 'qrcode-terminal';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
@@ -6,16 +6,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const isRender = process.env.RENDER === "true";
-const chromiumPath = process.env.PUPPETEER_EXECUTABLE_PATH || null;
 
 // ✅ MongoDB Connection
-async function connectDB() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ Connected to MongoDB");
-  } catch (err) {
-    console.error("❌ MongoDB connection error:", err);
-  }
+try {
+  await mongoose.connect(process.env.MONGO_URI);
+  console.log("✅ Connected to MongoDB");
+} catch (err) {
+  console.error("❌ MongoDB connection error:", err);
 }
 
 // ✅ Session Schema
@@ -26,99 +23,86 @@ const sessionSchema = new mongoose.Schema({
 const Session = mongoose.model("Session", sessionSchema);
 
 // ✅ Load session from DB
-async function loadSession() {
-  try {
-    const existing = await Session.findOne({ name: 'whatsappSession' });
-    if (existing) {
-      console.log("💾 Loaded existing session");
-      return existing.sessionData;
-    } else {
-      console.log("⚠️ No saved session found");
-      return null;
-    }
-  } catch (err) {
-    console.error("❌ Error loading session:", err);
-    return null;
+let sessionData = null;
+try {
+  const existing = await Session.findOne({ name: 'whatsappSession' });
+  if (existing) {
+    console.log("💾 Loaded existing session");
+    sessionData = existing.sessionData;
+  } else {
+    console.log("⚠️ No saved session found");
   }
+} catch (err) {
+  console.error("❌ Error loading session:", err);
 }
+const chromiumPath = process.env.PUPPETEER_EXECUTABLE_PATH || null;
 
-// ✅ Initialize WhatsApp client
-async function startBot() {
-  await connectDB();
-  const sessionData = await loadSession();
+const client = new Client({
+  authStrategy: new LocalAuth(),
+  puppeteer: {
+    headless: true,
+    executablePath: chromiumPath,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu'
+    ]
+  }
+});
 
-  const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-      headless: true,
-      executablePath: chromiumPath,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--window-size=1920,1080'
-      ]
-    }
-  });
 
-  // ✅ QR Code event
-  client.on('qr', (qr) => {
-    console.log("📱 Scan this QR code:");
-    qrcode.generate(qr, { small: true });
-  });
+// ✅ Events
+client.on('qr', (qr) => {
+  console.log("📱 Scan this QR code:");
+  qrcode.generate(qr, { small: true });
+});
 
-  // ✅ Authenticated event
-  client.on('authenticated', async (session) => {
-    try {
-      await Session.findOneAndUpdate(
-        { name: 'whatsappSession' },
-        { sessionData: session },
-        { upsert: true }
-      );
-      console.log("💾 Session saved successfully");
-    } catch (err) {
-      console.error("❌ Error saving session:", err);
-    }
-  });
+client.on('authenticated', async (session) => {
+  try {
+    await Session.findOneAndUpdate(
+      { name: 'whatsappSession' },
+      { sessionData: session },
+      { upsert: true }
+    );
+    console.log("💾 Session saved successfully");
+  } catch (err) {
+    console.error("❌ Error saving session:", err);
+  }
+});
 
-  // ✅ Ready event
-  client.on('ready', () => {
-    console.log("🤖 WhatsApp Bot is ready!");
-  });
+client.on('ready', () => {
+  console.log("🤖 WhatsApp Bot is ready!");
+});
 
-  // ✅ Message handling
-  client.on('message', async (msg) => {
-    const text = msg.body.trim();
-    console.log(`📩 Message from ${msg.from}: ${text}`);
+// ✅ Message handling
+client.on('message', async (msg) => {
+  const text = msg.body.trim();
+  console.log(`📩 Message from ${msg.from}: ${text}`);
 
-    if (["1", "١"].includes(text)) {
-      await msg.reply(`📲 تابعنا على وسائل التواصل:
+  if (["1", "١"].includes(text)) {
+    await msg.reply(`📲 تابعنا على وسائل التواصل:
 
 🌐 فيسبوك: https://www.facebook.com/share/1C9nxNg6Ug/
 📸 إنستغرام: https://www.instagram.com/sahl_cash
 📨 تيليجرام: https://t.me/sahlcash`);
-    } else if (["2", "٢"].includes(text)) {
-      await msg.reply(`🛠️ الدعم الفني وخدمة العملاء:
+  } else if (["2", "٢"].includes(text)) {
+    await msg.reply(`🛠️ الدعم الفني وخدمة العملاء:
 
 📞 خدمة العملاء: +963 958 498 134
 📞 الدعم الفني: +963 958 498 149
 📞 الإدارة العامة: +963 981 805 653
 📧 الإيميل: sahlcash@gmail.com`);
-    } else if (["3", "٣"].includes(text)) {
-      await msg.reply(`💼 خدماتنا:
+  } else if (["3", "٣"].includes(text)) {
+    await msg.reply(`💼 خدماتنا:
 
 📱 شحن أرصدة الموبايل (سوريا ولبنان)
 🎮 شحن ألعاب (UC ببجي، فري فاير...)
 🌐 شحن حسابات تواصل اجتماعي
 💳 تحويل واستلام الأموال
 🌎 موقعنا: https://www.sahl-cash.com/`);
-    }
-  });
+  }
+});
 
-  // ✅ Start client
-  client.initialize();
-}
-
-// ✅ Start the bot
-startBot();
+// ✅ Initialize bot
+client.initialize();
