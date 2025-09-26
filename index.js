@@ -5,19 +5,27 @@ const puppeteer = require('puppeteer');
 require('dotenv').config();
 
 async function startClient() {
-   
-    const client = new Client({
-        puppeteer: {
-            headless: true,
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath()
-        }
-    });
+    // Configure Puppeteer for Render environment
+    const puppeteerOptions = {
+        headless: true,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu'
+        ]
+    };
 
+    const client = new Client({
+        puppeteer: puppeteerOptions
+    });
 
     client.on('qr', qr => qrcode.generate(qr, { small: true }));
     client.on('ready', () => console.log('✅ البوت جاهز للعمل!'));
    
-
     client.on('message', message => {
         const text = message.body.trim();
         if (text === "1" || text === "١") {
@@ -65,4 +73,7 @@ async function startClient() {
     client.initialize();
 }
 
-startClient();
+startClient().catch(error => {
+    console.error('Error starting client:', error);
+    process.exit(1);
+});
