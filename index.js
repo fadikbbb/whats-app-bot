@@ -1,14 +1,14 @@
-const { Client } = require('whatsapp-web.js');
+const venom = require('venom-bot');
 const qrcode = require('qrcode-terminal');
-const puppeteer = require('puppeteer');
 
 require('dotenv').config();
 
 async function startClient() {
-    // Configure Puppeteer for Render environment
-    const puppeteerOptions = {
+    const client = await venom.create({
+        session: 'sahl-cash-bot',
         headless: true,
-        args: [
+        useChrome: false,
+        browserArgs: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
@@ -17,19 +17,15 @@ async function startClient() {
             '--no-zygote',
             '--disable-gpu'
         ]
-    };
-
-    const client = new Client({
-        puppeteer: puppeteerOptions
     });
 
-    client.on('qr', qr => qrcode.generate(qr, { small: true }));
-    client.on('ready', () => console.log('✅ البوت جاهز للعمل!'));
-   
-    client.on('message', message => {
+    console.log('✅ البوت جاهز للعمل!');
+
+    client.onMessage(async (message) => {
         const text = message.body.trim();
+        
         if (text === "1" || text === "١") {
-            message.reply(
+            await client.sendText(message.from, 
                 `📲 تابعنا على وسائل التواصل:
 
 🌐 فيسبوك: https://www.facebook.com/share/1C9nxNg6Ug/
@@ -39,7 +35,7 @@ async function startClient() {
 📨 تيليجرام: https://t.me/sahlcash`
             );
         } else if (text === "2" || text === "٢") {
-            message.reply(
+            await client.sendText(message.from,
                 `🛠️ الدعم الفني وخدمة العملاء:
 
 📞 واتساب خدمة العملاء :
@@ -54,7 +50,7 @@ async function startClient() {
 📧 الإيميل: sahlcash@gmail.com`
             );
         } else if (text === "3" || text === "٣") {
-            message.reply(
+            await client.sendText(message.from,
                 `💼 خدماتنا:
 
 📱 شحن أرصدة الموبايل (سوريا ولبنان).
@@ -69,11 +65,8 @@ async function startClient() {
             );
         }
     });
-
-    client.initialize();
 }
 
 startClient().catch(error => {
     console.error('Error starting client:', error);
-    process.exit(1);
 });
