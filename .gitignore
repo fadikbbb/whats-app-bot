@@ -1,8 +1,17 @@
+# node_modules
 node_modules/
-.wwebjs_auth/
-.wwebjs_cache/
+
+# ملفات الجلسة (session)
+# session.json
+*.local-auth/
+
+# ملفات البيئة
 .env
+
+# ملفات النظام
 .DS_Store
 Thumbs.db
-*.log
-logs/
+
+# lock files
+package-lock.json
+yarn.lock

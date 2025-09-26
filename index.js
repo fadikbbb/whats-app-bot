@@ -1,52 +1,41 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+import { Client, LocalAuth } from 'whatsapp-web.js';
+import qrcode from 'qrcode-terminal';
+import dotenv from 'dotenv';
+import fs from 'fs';
 
-console.log('🚀 Starting WhatsApp Bot for Sahl Cash...');
+dotenv.config();
 
+const SESSION_FILE = process.env.SESSION_FILE || 'session.json';
+
+// إعداد authStrategy مع تخزين الجلسة
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth({
+        clientId: "bot",         // لتجنب تعارض مع جلسات أخرى
+        dataPath: './',          // حفظ session في نفس المجلد
+    }),
     puppeteer: {
         headless: true,
         args: [
             '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu'
+            '--disable-setuid-sandbox'
         ]
     }
 });
 
-client.on('qr', (qr) => {
-    console.log('📱 Scan this QR code with WhatsApp:');
+// QR code عند الحاجة
+client.on('qr', qr => {
     qrcode.generate(qr, { small: true });
+    console.log('⚡ Scan QR code with WhatsApp!');
 });
 
+// جاهزية البوت
 client.on('ready', () => {
-    console.log('✅ البوت جاهز للعمل!');
+    console.log('✅ WhatsApp bot is ready!');
 });
 
-client.on('authenticated', () => {
-    console.log('🔐 Authentication successful!');
-});
-
-client.on('auth_failure', (msg) => {
-    console.error('❌ Authentication failed:', msg);
-});
-
-client.on('disconnected', (reason) => {
-    console.log('🔌 Client disconnected:', reason);
-});
-
-client.on('message', async (message) => {
-    // Ignore messages from status broadcasts
-    if (message.from === 'status@broadcast') return;
-    
+// الردود التلقائية
+client.on('message', async message => {
     const text = message.body.trim();
-
-    console.log(`📨 Received message from ${message.from}: ${text}`);
 
     if (text === "1" || text === "١") {
         await message.reply(
@@ -90,19 +79,5 @@ client.on('message', async (message) => {
     }
 });
 
-// Error handling
-client.on('error', (error) => {
-    console.error('Client error:', error);
-});
-
-process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-// Initialize the client
-console.log('🤖 Initializing WhatsApp client...');
+// تشغيل البوت
 client.initialize();
