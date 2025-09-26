@@ -21,7 +21,3 @@ services:
         value: /usr/bin/google-chrome
       - key: RENDER
         value: true
-      - key: MONGO_URI
-        fromDatabase:
-          name: whatsapp-bot-db
-          property: mongodb+srv://fadikbb2004_db_user:A2B8g7iyeWHMkTOP@cluster0.eaizqsm.mongodb.net/whatsappBot
