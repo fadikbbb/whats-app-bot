@@ -4,6 +4,7 @@ const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import { execSync } from 'child_process';
 
 dotenv.config();
 
@@ -22,11 +23,43 @@ const connectDB = async () => {
     }
 };
 
+// Function to find Chrome executable
+const findChromePath = () => {
+    if (process.env.RENDER !== 'true') {
+        // Local development - use Windows path
+        return 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+    }
+
+    // On Render, try different possible Chrome paths
+    const possiblePaths = [
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/snap/bin/chromium'
+    ];
+
+    for (const path of possiblePaths) {
+        try {
+            execSync(`which ${path}`, { stdio: 'ignore' });
+            console.log(`✅ Found Chrome at: ${path}`);
+            return path;
+        } catch (error) {
+            // Continue to next path
+        }
+    }
+
+    console.log('❌ Chrome not found in standard paths. Letting Puppeteer use its own browser.');
+    return null;
+};
+
 // Initialize the bot
 async function initializeBot() {
     console.log('🚀 Starting WhatsApp Bot...');
     
-    // Configure Puppeteer - SIMPLIFIED VERSION
+    const chromePath = findChromePath();
+    
+    // Configure Puppeteer
     const puppeteerOptions = {
         headless: true,
         args: [
@@ -37,31 +70,25 @@ async function initializeBot() {
             '--no-first-run',
             '--no-zygote',
             '--disable-gpu',
-            '--single-process'
+            '--single-process',
+            '--remote-debugging-port=0',
+            '--remote-debugging-address=0.0.0.0'
         ]
     };
 
-    // For Render deployment - use the environment variable or default Linux path
-    if (process.env.RENDER === 'true') {
-        console.log('🔧 Running on Render environment');
-        // Use the path from environment variable or default Linux Chrome path
-        puppeteerOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome';
-        console.log('📍 Using Chrome path:', puppeteerOptions.executablePath);
+    // Only set executablePath if we found Chrome
+    if (chromePath) {
+        puppeteerOptions.executablePath = chromePath;
+        console.log(`📍 Using browser: ${chromePath}`);
     } else {
-        // Local development - try to use system Chrome
-        console.log('🔧 Running on local environment');
-        puppeteerOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        console.log('📍 Using Puppeteer\'s built-in browser');
     }
 
     const client = new Client({
         authStrategy: new LocalAuth({
             clientId: "whatsapp-bot-render"
         }),
-        puppeteer: puppeteerOptions,
-        webVersionCache: {
-            type: 'remote',
-            remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
-        }
+        puppeteer: puppeteerOptions
     });
 
     // QR Code event
@@ -90,10 +117,10 @@ async function initializeBot() {
 
     client.on('disconnected', (reason) => {
         console.log('❌ Client was logged out:', reason);
-        console.log('🔄 Attempting to reconnect...');
+        console.log('🔄 Attempting to reconnect in 10 seconds...');
         setTimeout(() => {
             initializeBot();
-        }, 5000);
+        }, 10000);
     });
 
     // Message handling
@@ -101,7 +128,7 @@ async function initializeBot() {
         try {
             const text = message.body.trim();
             
-            // Ignore messages from status broadcasts and groups
+            // Ignore messages from status broadcasts
             if (message.from === 'status@broadcast') return;
             
             console.log(`📩 Received message from ${message.from}: ${text}`);
@@ -144,7 +171,7 @@ async function initializeBot() {
         }
     });
 
-    // Initialize client with better error handling
+    // Initialize client
     try {
         console.log('🔄 Initializing WhatsApp client...');
         await client.initialize();
@@ -152,26 +179,29 @@ async function initializeBot() {
     } catch (error) {
         console.error('❌ Error initializing bot:', error);
         
-        // Specific error handling
-        if (error.message.includes('ENOENT') || error.message.includes('Failed to launch')) {
-            console.log('💡 Browser not found. Trying alternative approach...');
+        // If Chrome path failed, try without any path (use Puppeteer's Chromium)
+        if (chromePath && error.message.includes('Tried to use PUPPETEER_EXECUTABLE_PATH')) {
+            console.log('💡 Chrome path failed, trying with Puppeteer\'s built-in browser...');
             
-            // Try without specifying executable path
-            const clientWithoutPath = new Client({
+            const clientWithBuiltin = new Client({
                 authStrategy: new LocalAuth({
-                    clientId: "whatsapp-bot-render-alt"
+                    clientId: "whatsapp-bot-builtin"
                 }),
                 puppeteer: {
                     headless: true,
-                    args: puppeteerOptions.args
+                    args: [
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                        '--disable-dev-shm-usage'
+                    ]
                 }
             });
             
             try {
-                await clientWithoutPath.initialize();
-                console.log('✅ Bot initialized successfully with default browser');
+                await clientWithBuiltin.initialize();
+                console.log('✅ Bot initialized successfully with built-in browser');
             } catch (error2) {
-                console.error('❌ Failed with default browser too:', error2);
+                console.error('❌ Failed with built-in browser too:', error2);
             }
         }
     }
@@ -181,23 +211,19 @@ async function initializeBot() {
 async function startApp() {
     try {
         console.log('🔧 Starting application...');
+        console.log('📍 Environment:', process.env.RENDER === 'true' ? 'Render' : 'Local');
         
-        // Connect to MongoDB (optional for now)
+        // Connect to MongoDB
         await connectDB();
         
         // Initialize the bot
         await initializeBot();
         
-        console.log('\n🤖 Bot startup completed successfully!');
+        console.log('\n🤖 Bot startup completed!');
         console.log('📍 The bot will automatically reconnect if disconnected.');
-        console.log('⏹️  Press Ctrl+C to stop the bot.');
         
     } catch (error) {
         console.error('❌ Failed to start application:', error);
-        // Don't exit on Render - let it try to recover
-        if (process.env.RENDER !== 'true') {
-            process.exit(1);
-        }
     }
 }
 
