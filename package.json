@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "node index.js"
+    "dev": "node index.js",
+    "postinstall": "node -e \"console.log('Forcing Puppeteer to use bundled Chromium...')\""
   },
   "dependencies": {
     "dotenv": "^16.0.3",

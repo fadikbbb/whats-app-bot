@@ -4,7 +4,6 @@ const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { execSync } from 'child_process';
 
 dotenv.config();
 
@@ -23,72 +22,28 @@ const connectDB = async () => {
     }
 };
 
-// Function to find Chrome executable
-const findChromePath = () => {
-    if (process.env.RENDER !== 'true') {
-        // Local development - use Windows path
-        return 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-    }
-
-    // On Render, try different possible Chrome paths
-    const possiblePaths = [
-        '/usr/bin/google-chrome',
-        '/usr/bin/google-chrome-stable',
-        '/usr/bin/chromium',
-        '/usr/bin/chromium-browser',
-        '/snap/bin/chromium'
-    ];
-
-    for (const path of possiblePaths) {
-        try {
-            execSync(`which ${path}`, { stdio: 'ignore' });
-            console.log(`✅ Found Chrome at: ${path}`);
-            return path;
-        } catch (error) {
-            // Continue to next path
-        }
-    }
-
-    console.log('❌ Chrome not found in standard paths. Letting Puppeteer use its own browser.');
-    return null;
-};
-
 // Initialize the bot
 async function initializeBot() {
     console.log('🚀 Starting WhatsApp Bot...');
     
-    const chromePath = findChromePath();
-    
-    // Configure Puppeteer
-    const puppeteerOptions = {
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu',
-            '--single-process',
-            '--remote-debugging-port=0',
-            '--remote-debugging-address=0.0.0.0'
-        ]
-    };
-
-    // Only set executablePath if we found Chrome
-    if (chromePath) {
-        puppeteerOptions.executablePath = chromePath;
-        console.log(`📍 Using browser: ${chromePath}`);
-    } else {
-        console.log('📍 Using Puppeteer\'s built-in browser');
-    }
-
+    // Simple Puppeteer configuration - let it use its own Chromium
     const client = new Client({
         authStrategy: new LocalAuth({
             clientId: "whatsapp-bot-render"
         }),
-        puppeteer: puppeteerOptions
+        puppeteer: {
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-gpu',
+                '--single-process'
+            ]
+        }
     });
 
     // QR Code event
@@ -98,6 +53,7 @@ async function initializeBot() {
         qrcode.generate(qr, { small: true });
         console.log('=========================================');
         console.log('⚠️  Scan the QR code above with WhatsApp within 2 minutes!');
+        console.log('📱 Open WhatsApp → Settings → Linked Devices → Link a Device');
     });
 
     // Ready event
@@ -179,30 +135,28 @@ async function initializeBot() {
     } catch (error) {
         console.error('❌ Error initializing bot:', error);
         
-        // If Chrome path failed, try without any path (use Puppeteer's Chromium)
-        if (chromePath && error.message.includes('Tried to use PUPPETEER_EXECUTABLE_PATH')) {
-            console.log('💡 Chrome path failed, trying with Puppeteer\'s built-in browser...');
-            
-            const clientWithBuiltin = new Client({
-                authStrategy: new LocalAuth({
-                    clientId: "whatsapp-bot-builtin"
-                }),
-                puppeteer: {
-                    headless: true,
-                    args: [
-                        '--no-sandbox',
-                        '--disable-setuid-sandbox',
-                        '--disable-dev-shm-usage'
-                    ]
-                }
-            });
-            
-            try {
-                await clientWithBuiltin.initialize();
-                console.log('✅ Bot initialized successfully with built-in browser');
-            } catch (error2) {
-                console.error('❌ Failed with built-in browser too:', error2);
+        // Try alternative approach if first attempt fails
+        console.log('🔄 Trying alternative browser configuration...');
+        
+        const alternativeClient = new Client({
+            authStrategy: new LocalAuth({
+                clientId: "whatsapp-bot-alternative"
+            }),
+            puppeteer: {
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage'
+                ]
             }
+        });
+        
+        try {
+            await alternativeClient.initialize();
+            console.log('✅ Bot initialized successfully with alternative configuration');
+        } catch (error2) {
+            console.error('❌ Failed with alternative configuration:', error2);
         }
     }
 }
@@ -211,7 +165,7 @@ async function initializeBot() {
 async function startApp() {
     try {
         console.log('🔧 Starting application...');
-        console.log('📍 Environment:', process.env.RENDER === 'true' ? 'Render' : 'Local');
+        console.log('📍 Environment: Render');
         
         // Connect to MongoDB
         await connectDB();
