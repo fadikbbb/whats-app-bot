@@ -5,6 +5,18 @@ import qrcode from 'qrcode-terminal';
 import dotenv from 'dotenv';
 
 dotenv.config();
+import express from "express";
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  res.send("✅ WhatsApp bot is running!");
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🌐 Server is running on port ${PORT}`);
+});
 
 const client = new Client({
     authStrategy: new LocalAuth({ clientId: "bot" }),
@@ -48,3 +60,7 @@ client.on('message', async message => {
 });
 
 client.initialize();
+
+
+
+
